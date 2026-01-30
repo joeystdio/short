@@ -1,0 +1,50 @@
+services:
+  app:
+    build: .
+    container_name: short-app
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgres://short:short@short-db:5432/short
+      - IP_SALT=${IP_SALT:-randomsaltvalue}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+      - n8n-setup_n8n-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.short.rule=Host(`short.jdms.nl`)"
+      - "traefik.http.routers.short.entrypoints=websecure"
+      - "traefik.http.routers.short.tls.certresolver=letsencrypt"
+      - "traefik.http.services.short.loadbalancer.server.port=3000"
+      - "traefik.docker.network=n8n-setup_n8n-network"
+
+  db:
+    image: postgres:16-alpine
+    container_name: short-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=short
+      - POSTGRES_PASSWORD=short
+      - POSTGRES_DB=short
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U short"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  internal:
+    driver: bridge
+  n8n-setup_n8n-network:
+    external: true
+
+volumes:
+  pgdata:

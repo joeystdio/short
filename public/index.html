@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Short - Link Shortener</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { 
+      font-size: 2.5rem; 
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    
+    .auth-required {
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+    .auth-required a {
+      display: inline-block;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-top: 1rem;
+    }
+    
+    .create-form {
+      background: #141414;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      border: 1px solid #222;
+    }
+    .form-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .form-row:last-child { margin-bottom: 0; }
+    input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      font-size: 1rem;
+    }
+    input:focus { outline: none; border-color: #667eea; }
+    input::placeholder { color: #555; }
+    .slug-input { max-width: 200px; }
+    button {
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .links-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .links-header h2 { font-size: 1.25rem; }
+    
+    .links-list { display: flex; flex-direction: column; gap: 1rem; }
+    .link-card {
+      background: #141414;
+      padding: 1.25rem;
+      border-radius: 12px;
+      border: 1px solid #222;
+    }
+    .link-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .short-url {
+      font-weight: 600;
+      color: #667eea;
+      text-decoration: none;
+      font-size: 1.1rem;
+    }
+    .short-url:hover { text-decoration: underline; }
+    .original-url {
+      color: #666;
+      font-size: 0.875rem;
+      word-break: break-all;
+      margin-bottom: 0.75rem;
+    }
+    .link-stats {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.875rem;
+      color: #888;
+    }
+    .stat { display: flex; align-items: center; gap: 0.25rem; }
+    .stat-value { color: #e0e0e0; font-weight: 600; }
+    
+    .link-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .btn-small {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+      background: #222;
+      border-radius: 6px;
+    }
+    .btn-small:hover { background: #333; }
+    .btn-danger { background: #4a1515; }
+    .btn-danger:hover { background: #6a2020; }
+    
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #666;
+    }
+    
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      padding: 1rem 1.5rem;
+      background: #222;
+      border-radius: 8px;
+      border: 1px solid #333;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: #22c55e; }
+    .toast.error { border-color: #ef4444; }
+    
+    .user-info {
+      position: absolute;
+      top: 1rem;
+      right: 2rem;
+      font-size: 0.875rem;
+      color: #666;
+    }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: #141414;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 1.5rem;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal h3 { margin-bottom: 1rem; }
+    .modal-close {
+      float: right;
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stats-card {
+      background: #0a0a0a;
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stats-card .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #667eea;
+    }
+    .stats-card .label {
+      font-size: 0.75rem;
+      color: #666;
+      text-transform: uppercase;
+    }
+    .clicks-table {
+      width: 100%;
+      font-size: 0.875rem;
+    }
+    .clicks-table th {
+      text-align: left;
+      padding: 0.5rem;
+      border-bottom: 1px solid #333;
+      color: #666;
+    }
+    .clicks-table td {
+      padding: 0.5rem;
+      border-bottom: 1px solid #222;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="app">
+      <div class="auth-required" id="auth-required">
+        <h1>Short</h1>
+        <p class="subtitle">Link shortener with click tracking</p>
+        <p>Please sign in to continue</p>
+        <a href="https://auth.jdms.nl?redirect=https://short.jdms.nl">Sign in with SSO</a>
+      </div>
+      
+      <div id="dashboard" style="display: none;">
+        <div class="user-info">Signed in as <span id="user-email"></span></div>
+        <h1>Short</h1>
+        <p class="subtitle">Link shortener with click tracking</p>
+        
+        <div class="create-form">
+          <form id="create-form">
+            <div class="form-row">
+              <input type="url" id="url-input" placeholder="https://example.com/very-long-url" required>
+            </div>
+            <div class="form-row">
+              <input type="text" id="slug-input" class="slug-input" placeholder="custom-slug (optional)" pattern="[a-zA-Z0-9_-]+">
+              <button type="submit">Shorten</button>
+            </div>
+          </form>
+        </div>
+        
+        <div class="links-header">
+          <h2>Your Links</h2>
+          <button onclick="loadLinks()" class="btn-small">Refresh</button>
+        </div>
+        
+        <div class="links-list" id="links-list">
+          <div class="empty-state">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="modal-overlay" id="stats-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <h3 id="modal-title">Link Stats</h3>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+  
+  <div class="toast" id="toast"></div>
+  
+  <script>
+    let currentUser = null;
+    
+    async function init() {
+      try {
+        const res = await fetch('/api/me');
+        if (res.ok) {
+          const data = await res.json();
+          currentUser = data.user;
+          document.getElementById('auth-required').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          document.getElementById('user-email').textContent = currentUser.email || currentUser.name || currentUser.id;
+          loadLinks();
+        }
+      } catch (e) {
+        console.error('Auth check failed:', e);
+      }
+    }
+    
+    async function loadLinks() {
+      const list = document.getElementById('links-list');
+      try {
+        const res = await fetch('/api/links');
+        const data = await res.json();
+        
+        if (data.links.length === 0) {
+          list.innerHTML = '<div class="empty-state">No links yet. Create your first one above!</div>';
+          return;
+        }
+        
+        list.innerHTML = data.links.map(link => `
+          <div class="link-card">
+            <div class="link-header">
+              <a href="/${link.slug}" target="_blank" class="short-url">short.jdms.nl/${link.slug}</a>
+              <div class="link-actions">
+                <button class="btn-small" onclick="copyLink('${link.slug}')">Copy</button>
+                <button class="btn-small" onclick="showStats('${link.slug}')">Stats</button>
+                <button class="btn-small btn-danger" onclick="deleteLink('${link.slug}')">Delete</button>
+              </div>
+            </div>
+            <div class="original-url">${escapeHtml(link.url)}</div>
+            <div class="link-stats">
+              <div class="stat">
+                <span class="stat-value">${link.click_count}</span> clicks
+              </div>
+              <div class="stat">
+                Created ${formatDate(link.created_at)}
+              </div>
+              ${link.last_click ? `<div class="stat">Last click ${formatDate(link.last_click)}</div>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load links:', e);
+        list.innerHTML = '<div class="empty-state">Failed to load links</div>';
+      }
+    }
+    
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = document.getElementById('url-input').value;
+      const slug = document.getElementById('slug-input').value || undefined;
+      
+      try {
+        const res = await fetch('/api/links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, slug })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+          showToast('Link created! Copied to clipboard.', 'success');
+          navigator.clipboard.writeText(data.shortUrl);
+          document.getElementById('url-input').value = '';
+          document.getElementById('slug-input').value = '';
+          loadLinks();
+        } else {
+          showToast(data.error || 'Failed to create link', 'error');
+        }
+      } catch (e) {
+        showToast('Failed to create link', 'error');
+      }
+    });
+    
+    async function copyLink(slug) {
+      await navigator.clipboard.writeText(`https://short.jdms.nl/${slug}`);
+      showToast('Copied to clipboard!', 'success');
+    }
+    
+    async function deleteLink(slug) {
+      if (!confirm('Delete this link? All click data will be lost.')) return;
+      
+      try {
+        const res = await fetch(`/api/links/${slug}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('Link deleted', 'success');
+          loadLinks();
+        } else {
+          showToast('Failed to delete link', 'error');
+        }
+      } catch (e) {
+        showToast('Failed to delete link', 'error');
+      }
+    }
+    
+    async function showStats(slug) {
+      const modal = document.getElementById('stats-modal');
+      const content = document.getElementById('modal-content');
+      
+      content.innerHTML = '<div class="empty-state">Loading...</div>';
+      modal.classList.add('show');
+      
+      try {
+        const res = await fetch(`/api/links/${slug}/stats`);
+        const data = await res.json();
+        
+        document.getElementById('modal-title').textContent = `Stats: ${slug}`;
+        
+        content.innerHTML = `
+          <div class="stats-grid">
+            <div class="stats-card">
+              <div class="value">${data.stats.total_clicks}</div>
+              <div class="label">Total Clicks</div>
+            </div>
+            <div class="stats-card">
+              <div class="value">${data.stats.unique_days}</div>
+              <div class="label">Active Days</div>
+            </div>
+            <div class="stats-card">
+              <div class="value">${data.stats.countries}</div>
+              <div class="label">Countries</div>
+            </div>
+          </div>
+          
+          ${data.countries.length ? `
+            <h4 style="margin-bottom: 0.5rem;">Top Countries</h4>
+            <div style="margin-bottom: 1.5rem;">
+              ${data.countries.map(c => `<span style="margin-right: 1rem;">${c.country}: ${c.count}</span>`).join('')}
+            </div>
+          ` : ''}
+          
+          <h4 style="margin-bottom: 0.5rem;">Recent Clicks</h4>
+          ${data.recentClicks.length ? `
+            <table class="clicks-table">
+              <thead>
+                <tr><th>Time</th><th>Country</th><th>Referrer</th></tr>
+              </thead>
+              <tbody>
+                ${data.recentClicks.slice(0, 20).map(c => `
+                  <tr>
+                    <td>${formatDate(c.timestamp)}</td>
+                    <td>${c.country || '-'}</td>
+                    <td>${c.referrer ? escapeHtml(c.referrer.substring(0, 40)) : '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<div class="empty-state">No clicks yet</div>'}
+        `;
+      } catch (e) {
+        content.innerHTML = '<div class="empty-state">Failed to load stats</div>';
+      }
+    }
+    
+    function closeModal() {
+      document.getElementById('stats-modal').classList.remove('show');
+    }
+    
+    function showToast(message, type = '') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast ' + type + ' show';
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = (now - date) / 1000;
+      
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+      return date.toLocaleDateString();
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Close modal on outside click
+    document.getElementById('stats-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'stats-modal') closeModal();
+    });
+    
+    init();
+  </script>
+</body>
+</html>
