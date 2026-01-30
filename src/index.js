@@ -16,6 +16,17 @@ const pool = new Pool({
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
+
+// Auth check for main page - redirect if not logged in
+app.get('/', (req, res, next) => {
+  const sessionCookie = req.cookies['__Secure-next-auth.session-token'] || 
+                        req.cookies['next-auth.session-token'];
+  if (!sessionCookie) {
+    return res.redirect('https://auth.jdms.nl/login?callbackUrl=https://short.jdms.nl');
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Initialize database
@@ -48,7 +59,8 @@ async function initDB() {
 
 // SSO Auth middleware
 async function requireAuth(req, res, next) {
-  const sessionCookie = req.cookies['auth_session'] || req.cookies['session'];
+  const sessionCookie = req.cookies['__Secure-next-auth.session-token'] || 
+                        req.cookies['next-auth.session-token'];
   
   if (!sessionCookie) {
     return res.status(401).json({ error: 'Not authenticated' });
@@ -58,7 +70,7 @@ async function requireAuth(req, res, next) {
     const response = await fetch('https://auth.jdms.nl/api/validate', {
       method: 'GET',
       headers: {
-        'Cookie': `auth_session=${sessionCookie}; session=${sessionCookie}`
+        'Cookie': `__Secure-next-auth.session-token=${sessionCookie}; next-auth.session-token=${sessionCookie}`
       }
     });
     
@@ -67,7 +79,10 @@ async function requireAuth(req, res, next) {
     }
     
     const data = await response.json();
-    req.user = data.user || data;
+    if (!data.valid) {
+      return res.status(401).json({ error: 'Invalid session' });
+    }
+    req.user = data.user;
     next();
   } catch (err) {
     console.error('Auth validation error:', err);
